@@ -91,6 +91,34 @@ app.get('/mcp/tools', async (req, res) => {
  */
 async function executeMcpTool(toolName, args) {
   return new Promise((resolve, reject) => {
+    // Create a temporary configuration file for this specific request
+    const tempConfig = {
+      graphQL: {
+        endpoint: args.graphqlEndpoint || `${args.instanceUrl}/sitecore/api/graph/`,
+        apiKey: args.authToken || args.apiKey || '{6D3F291E-66A5-4703-887A-D549AF83D859}'
+      },
+      itemService: {
+        domain: args.domain || 'sitecore',
+        username: args.username,
+        password: args.password,
+        serverUrl: args.instanceUrl
+      },
+      powershell: {
+        domain: args.domain || 'sitecore', 
+        username: args.username,
+        password: args.password,
+        serverUrl: args.instanceUrl
+      }
+    };
+
+    // Write config to a temporary file
+    const configPath = `/tmp/mcp-config-${Date.now()}.json`;
+    require('fs').writeFileSync(configPath, JSON.stringify(tempConfig, null, 2));
+    
+    console.log('Created MCP config file:', configPath);
+    console.log('Config contents:', JSON.stringify(tempConfig, (key, value) => 
+      key === 'password' ? '***' : value, 2));
+
     // Set up environment variables for MCP server
     // The MCP Sitecore server expects specific env var names based on config analysis
     const env = {
@@ -130,9 +158,24 @@ async function executeMcpTool(toolName, args) {
       HAS_PASSWORD: env.SITECORE_PASSWORD ? 'yes' : 'no'
     });
 
-    // Spawn the MCP server process
-    const mcpServer = spawn('npx', ['@antonytm/mcp-sitecore-server'], {
-      env,
+    // Try multiple approaches to configure the MCP server
+    const mcpArgs = ['@antonytm/mcp-sitecore-server'];
+    
+    // Add potential configuration file argument
+    mcpArgs.push('--config', configPath);
+
+    console.log('Starting MCP server with args:', mcpArgs);
+
+    // Spawn the MCP server process with enhanced environment
+    const enhancedEnv = {
+      ...env,
+      // Add additional configuration approaches
+      MCP_CONFIG_FILE: configPath,
+      SITECORE_CONFIG_FILE: configPath
+    };
+
+    const mcpServer = spawn('npx', mcpArgs, {
+      env: enhancedEnv,
       stdio: ['pipe', 'pipe', 'pipe']
     });
 
@@ -170,6 +213,14 @@ async function executeMcpTool(toolName, args) {
 
     // Handle process completion
     mcpServer.on('close', (code) => {
+      // Clean up temporary config file
+      try {
+        require('fs').unlinkSync(configPath);
+        console.log('Cleaned up config file:', configPath);
+      } catch (cleanupError) {
+        console.warn('Failed to cleanup config file:', cleanupError.message);
+      }
+
       if (code === 0) {
         try {
           // Parse the MCP response
@@ -195,13 +246,25 @@ async function executeMcpTool(toolName, args) {
     });
 
     mcpServer.on('error', (error) => {
+      // Clean up config file on error too
+      try {
+        require('fs').unlinkSync(configPath);
+      } catch (cleanupError) {
+        // Ignore cleanup errors
+      }
       console.error('Failed to start MCP server:', error);
       reject(new Error(`Failed to start MCP server: ${error.message}`));
     });
 
     // Timeout after 30 seconds
-    setTimeout(() => {
+    const timeout = setTimeout(() => {
       mcpServer.kill('SIGTERM');
+      // Clean up config file on timeout
+      try {
+        require('fs').unlinkSync(configPath);
+      } catch (cleanupError) {
+        // Ignore cleanup errors
+      }
       reject(new Error('MCP tool execution timed out'));
     }, 30000);
   });
