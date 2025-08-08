@@ -1,0 +1,30 @@
+{
+  "name": "smart-mcp-server",
+  "version": "1.0.0",
+  "description": "SMART Platform MCP Sitecore Server for Railway",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "@antonytm/mcp-sitecore-server": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.17.2",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "ws": "^8.14.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "sitecore",
+    "railway",
+    "smart-platform"
+  ],
+  "author": "SMART Platform",
+  "license": "MIT"
+}
