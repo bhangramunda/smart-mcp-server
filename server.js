@@ -8,6 +8,7 @@ import cors from 'cors';
 import { WebSocketServer } from 'ws';
 import { spawn } from 'child_process';
 import { createServer } from 'http';
+import { writeFileSync, unlinkSync } from 'fs';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -113,7 +114,7 @@ async function executeMcpTool(toolName, args) {
 
     // Write config to a temporary file
     const configPath = `/tmp/mcp-config-${Date.now()}.json`;
-    require('fs').writeFileSync(configPath, JSON.stringify(tempConfig, null, 2));
+    writeFileSync(configPath, JSON.stringify(tempConfig, null, 2));
     
     console.log('Created MCP config file:', configPath);
     console.log('Config contents:', JSON.stringify(tempConfig, (key, value) => 
@@ -215,7 +216,7 @@ async function executeMcpTool(toolName, args) {
     mcpServer.on('close', (code) => {
       // Clean up temporary config file
       try {
-        require('fs').unlinkSync(configPath);
+        unlinkSync(configPath);
         console.log('Cleaned up config file:', configPath);
       } catch (cleanupError) {
         console.warn('Failed to cleanup config file:', cleanupError.message);
@@ -248,7 +249,7 @@ async function executeMcpTool(toolName, args) {
     mcpServer.on('error', (error) => {
       // Clean up config file on error too
       try {
-        require('fs').unlinkSync(configPath);
+        unlinkSync(configPath);
       } catch (cleanupError) {
         // Ignore cleanup errors
       }
@@ -261,7 +262,7 @@ async function executeMcpTool(toolName, args) {
       mcpServer.kill('SIGTERM');
       // Clean up config file on timeout
       try {
-        require('fs').unlinkSync(configPath);
+        unlinkSync(configPath);
       } catch (cleanupError) {
         // Ignore cleanup errors
       }
