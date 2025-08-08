@@ -92,20 +92,26 @@ app.get('/mcp/tools', async (req, res) => {
 async function executeMcpTool(toolName, args) {
   return new Promise((resolve, reject) => {
     // Set up environment variables for MCP server
-    // The MCP Sitecore server expects specific env var names
+    // The MCP Sitecore server expects specific env var names based on config analysis
     const env = {
       ...process.env,
-      // GraphQL configuration
+      // GraphQL configuration - override the defaults
       SITECORE_GRAPHQL_ENDPOINT: args.graphqlEndpoint || `${args.instanceUrl}/sitecore/api/graph/`,
       SITECORE_API_KEY: args.authToken || args.apiKey || '{6D3F291E-66A5-4703-887A-D549AF83D859}',
       
-      // Item Service configuration  
-      SITECORE_SERVER_URL: args.instanceUrl, // Note: SERVER_URL not INSTANCE_URL
+      // Item Service configuration - these might need different variable names
+      SITECORE_ITEMSERVICE_URL: args.instanceUrl,
+      SITECORE_ITEMSERVICE_USERNAME: args.username,  
+      SITECORE_ITEMSERVICE_PASSWORD: args.password,
+      SITECORE_ITEMSERVICE_DOMAIN: args.domain || 'sitecore',
+      
+      // Legacy/alternative variable names for Item Service  
+      SITECORE_SERVER_URL: args.instanceUrl,
       SITECORE_USERNAME: args.username,
       SITECORE_PASSWORD: args.password,
       SITECORE_DOMAIN: args.domain || 'sitecore',
       
-      // PowerShell configuration (uses same credentials)
+      // PowerShell configuration (this one works correctly)
       POWERSHELL_SERVER_URL: args.instanceUrl,
       POWERSHELL_USERNAME: args.username,
       POWERSHELL_PASSWORD: args.password,
@@ -113,7 +119,7 @@ async function executeMcpTool(toolName, args) {
       
       // Additional settings
       SITECORE_DATABASE: args.database || 'master',
-      SITECORE_INSTANCE_URL: args.instanceUrl // Keep for backward compatibility
+      SITECORE_INSTANCE_URL: args.instanceUrl
     };
 
     console.log('Starting MCP server with environment:', {
